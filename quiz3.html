@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prosecutor's Fallacy</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      padding: 20px;
+      border-radius: 8px;
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    .quiz-option {
+      position: relative;
+      cursor: pointer;
+      background: #007BFF;
+      color: #fff;
+      padding: 15px;
+      margin: 10px 0;
+      text-align: left;
+      border-radius: 4px;
+      transition: background 0.3s;
+    }
+    .quiz-option:hover {
+      background: #0056b3;
+    }
+    .quiz-result-box {
+      position: absolute;
+      right: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #fff;
+      color: #333;
+      border: 1px solid #ccc;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+    .question-box {
+      margin-bottom: 20px;
+    }
+    .option {
+      margin: 10px 0;
+    }
+    button, input[type="number"] {
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 1em;
+    }
+    button {
+      background: #28a745;
+      color: #fff;
+    }
+    button:hover {
+      background: #218838;
+    }
+    .toggle-btn {
+      background: #17a2b8;
+    }
+    .toggle-btn:hover {
+      background: #138496;
+    }
+    .menu-btn {
+      background: #ffc107;
+      color: #333;
+    }
+    .menu-btn:hover {
+      background: #e0a800;
+    }
+    .hidden {
+      display: none;
+    }
+    .example-box {
+      background: #e9ecef;
+      border-left: 4px solid #007BFF;
+      padding: 10px;
+      margin-bottom: 20px;
+    }
+    .result-item {
+      border-bottom: 1px solid #ccc;
+      padding: 10px 0;
+    }
+    .nav-buttons {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .fast-forward {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .fast-forward input {
+      width: 60px;
+    }
+    #reset-scores {
+      margin-top: 20px;
+      display: block;
+      width: 100%;
+      background: #dc3545;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Main Menu / Quiz Selection -->
+    <div id="quiz-selection">
+      <h1>Kies een Quiz</h1>
+      <div class="quiz-option" data-quiz="quiz1">
+        Quiz 1: Algemene Kennis
+        <span class="quiz-result-box" id="result-quiz1"></span>
+      </div>
+      <div class="quiz-option" data-quiz="quiz2">
+        Quiz 2: Casus Polonium
+        <span class="quiz-result-box" id="result-quiz2"></span>
+      </div>
+      <!-- Add more quiz options as needed. Each quiz should have its corresponding result span -->
+      <button id="reset-scores" class="toggle-btn">Reset Scores</button>
+    </div>
+
+    <!-- Quiz screen -->
+    <div id="quiz-container" class="hidden">
+      <h2 id="quiz-title"></h2>
+      <!-- Example box with toggle -->
+      <div>
+        <button id="toggle-example" class="toggle-btn">Toon voorbeeld</button>
+        <div id="example-box" class="example-box hidden">
+          <p>
+            Dit is een voorbeeld van hoe de quiz werkt. Selecteer een antwoord en navigeer via 'Volgende',
+            'Vorige', of gebruik de snelkoppeling.
+          </p>
+        </div>
+      </div>
+      
+      <div id="question-container" class="question-box"></div>
+      
+      <!-- Navigation area with two groups -->
+      <div class="nav-buttons">
+        <div class="nav-left">
+          <button id="prev-btn" class="hidden">Vorige</button>
+          <button id="next-btn">Volgende</button>
+          <button id="finish-btn" class="toggle-btn hidden">Beëindig quiz</button>
+        </div>
+        <div class="nav-right">
+          <button id="menu-btn" class="menu-btn">Hoofdmenu</button>
+          <div class="fast-forward">
+            <label for="fast-forward-input">Ga naar vraag:</label>
+            <input id="fast-forward-input" type="number" min="1" step="1">
+            <button id="fast-forward-btn" class="toggle-btn">Ga</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quiz results screen -->
+    <div id="result-container" class="hidden">
+      <h2>Resultaten</h2>
+      <p id="score-text"></p>
+      <button id="show-details-btn" class="toggle-btn">Volledige uitwerking</button>
+      <div id="details-container" class="hidden"></div>
+      <button id="restart-btn" style="margin-top:15px;">Terug naar hoofdmenu</button>
+    </div>
+  </div>
+
+  <script>
+    // Quiz data structure with an optional allowShowAnswers flag.
+    const quizzes = {
+      quiz1: {
+        title: "Quiz 1: Algemene Kennis",
+        example: "Voorbeeld tekst voor de Algemene Kennis quiz.",
+        allowShowAnswers: true,  // Set true to display inline answer explanations.
+        questions: [
+          {
+            question: "Wat zegt het model van Bayes?",
+            options: ["Prior*LR=Posterior", "LR = Posterior", "LR*Posterior=Prior", "P(H)=P(H | B)"],
+            correct: 0,
+            explanation: "Het likelihood ratio model van Bayes stelt dat de posterior kans gelijk is aan de prior keer de likelihood ratio (meer uitleg!!)."
+          },
+          {
+            question: "Wat is de likelihood ratio?",
+            options: ["Verhouding ...", "...", "Verhouding tussen de kans op hypothese 1 gegeven het bewijs en de kans op hypothese 2 gegeven het bewijs", "Verhouding tussen de kans op het bewijs gegeven hypothese 1 en de kans op het bewijs gegeven hypothese 2."],
+            correct: 3,
+            explanation: "Verhouding tussen de kans op het bewijs gegeven hypothese 1 en de kans op het bewijs gegeven hypothese 2."
+          }
+        ]
+      },
+      quiz2: {
+        title: "Quiz 2: Casus Polonium",
+        example: "Voorbeeld tekst voor de polonium quiz.",
+        allowShowAnswers: false,  // Explanation toggle is disabled during the quiz.
+        questions: [
+          {
+            question: "In een moordzaak wordt getoetst of iemand is vermoord met polonium. Het resultaat is positief. De toets is 95% nauwkeurig, dat wil zeggen: slechts 5% false positives en geen false negatives. Hoe zeker ben je dat het slachtoffer is vermoord met polonium?",
+            options: ["Zeer Zeker", "Zeker", "Onzeker"],
+            correct: 2,
+            explanation: "De invloed van het positieve toets resultaat op de posterior is sterk afhankelijk van de prior kans. Die is hier niet vastgesteld. Het zou kunnen dat het alsnog waarschijnlijker is dat het slachtoffer niet aan polonium is overleden."
+          },
+          {
+            question: "Vraag 2",
+            options: ["a", "b", "c", "d"],
+            correct: 2,
+            explanation: "rabarber rabarber likelihoodratio."
+          }
+        ]
+      }
+    };
+
+    // Application state
+    let currentQuiz = null;
+    let currentQuestionIndex = 0;
+    let userAnswers = []; // stores chosen answer indices or -1 (blank)
+    let score = 0;
+
+    // DOM element references
+    const quizSelection = document.getElementById('quiz-selection');
+    const quizContainer = document.getElementById('quiz-container');
+    const resultContainer = document.getElementById('result-container');
+    const quizTitle = document.getElementById('quiz-title');
+    const questionContainer = document.getElementById('question-container');
+    const nextBtn = document.getElementById('next-btn');
+    const prevBtn = document.getElementById('prev-btn');
+    const finishBtn = document.getElementById('finish-btn');
+    const scoreText = document.getElementById('score-text');
+    const showDetailsBtn = document.getElementById('show-details-btn');
+    const detailsContainer = document.getElementById('details-container');
+    const restartBtn = document.getElementById('restart-btn');
+    const resetScoresBtn = document.getElementById('reset-scores');
+    const toggleExampleBtn = document.getElementById('toggle-example');
+    const exampleBox = document.getElementById('example-box');
+    const menuBtn = document.getElementById('menu-btn');
+    const fastForwardInput = document.getElementById('fast-forward-input');
+    const fastForwardBtn = document.getElementById('fast-forward-btn');
+
+    // Function to update result boxes next to each quiz option and color the option green if score >= total - 1.
+    function updateQuizResultsDisplay() {
+      const storedResults = JSON.parse(localStorage.getItem('quizResults') || '{}');
+      Object.keys(quizzes).forEach(quizId => {
+        const resultSpan = document.getElementById(`result-${quizId}`);
+        const quizOption = document.querySelector(`.quiz-option[data-quiz="${quizId}"]`);
+        const quizTitleText = quizzes[quizId].title;
+        if (storedResults[quizTitleText]) {
+          const res = storedResults[quizTitleText];
+          resultSpan.textContent = `${res.score} / ${res.total}`;
+          if (res.score >= res.total - 1) {
+            quizOption.style.background = "#28a745"; // green
+          } else {
+            quizOption.style.background = "#007BFF";
+          }
+        } else {
+          resultSpan.textContent = "Nog niet gedaan";
+          quizOption.style.background = "#007BFF";
+        }
+      });
+    }
+
+    // Initial update for quiz results display.
+    updateQuizResultsDisplay();
+
+    // Attach event listeners for quiz selection.
+    document.querySelectorAll('.quiz-option').forEach(option => {
+      option.addEventListener('click', () => {
+        const quizId = option.getAttribute('data-quiz');
+        startQuiz(quizId);
+      });
+    });
+
+    // Reset scores button handler.
+    resetScoresBtn.addEventListener('click', () => {
+      if (confirm("Weet je zeker dat je alle scores wilt resetten?")) {
+        localStorage.removeItem('quizResults');
+        updateQuizResultsDisplay();
+        alert("Scores zijn gereset.");
+      }
+    });
+
+    // Toggle example box visibility.
+    toggleExampleBtn.addEventListener('click', () => {
+      exampleBox.classList.toggle('hidden');
+      toggleExampleBtn.textContent = exampleBox.classList.contains('hidden') ? "Toon voorbeeld" : "Verberg voorbeeld";
+    });
+
+    // Start a quiz.
+    function startQuiz(quizId) {
+      currentQuiz = quizzes[quizId];
+      currentQuestionIndex = 0;
+      userAnswers = Array(currentQuiz.questions.length).fill(-1);
+      score = 0;
+      quizTitle.textContent = currentQuiz.title;
+      exampleBox.innerHTML = `<p>${currentQuiz.example}</p>`;
+      quizSelection.classList.add('hidden');
+      resultContainer.classList.add('hidden');
+      quizContainer.classList.remove('hidden');
+      renderQuestion();
+    }
+
+    // Render the current question and adjust navigation buttons accordingly.
+    function renderQuestion() {
+      questionContainer.innerHTML = "";
+      const q = currentQuiz.questions[currentQuestionIndex];
+      const qElem = document.createElement('h3');
+      qElem.textContent = `Vraag ${currentQuestionIndex + 1}: ${q.question}`;
+      questionContainer.appendChild(qElem);
+
+      const formElem = document.createElement('form');
+      q.options.forEach((option, index) => {
+        const optionContainer = document.createElement('div');
+        optionContainer.classList.add('option');
+        const radioInput = document.createElement('input');
+        radioInput.type = "radio";
+        radioInput.name = "option";
+        radioInput.id = "option" + index;
+        radioInput.value = index;
+        if (userAnswers[currentQuestionIndex] === index) {
+          radioInput.checked = true;
+        }
+        optionContainer.appendChild(radioInput);
+        const label = document.createElement('label');
+        label.htmlFor = "option" + index;
+        label.textContent = option;
+        optionContainer.appendChild(label);
+        formElem.appendChild(optionContainer);
+      });
+      questionContainer.appendChild(formElem);
+
+      // Conditionally render the inline explanation toggle if allowed.
+      if (currentQuiz.allowShowAnswers !== false) {
+        const explanationToggleBtn = document.createElement('button');
+        explanationToggleBtn.type = "button";
+        explanationToggleBtn.classList.add('toggle-btn');
+        explanationToggleBtn.textContent = "Toon antwoord";
+        const explanationElem = document.createElement('div');
+        explanationElem.classList.add('hidden');
+        explanationElem.style.marginTop = '10px';
+        explanationElem.style.padding = '10px';
+        explanationElem.style.border = '1px solid #ccc';
+        explanationElem.style.backgroundColor = '#f8f9fa';
+        explanationElem.textContent = q.explanation;
+        explanationToggleBtn.addEventListener('click', () => {
+          explanationElem.classList.toggle('hidden');
+          explanationToggleBtn.textContent = explanationElem.classList.contains('hidden') ? "Toon antwoord" : "Verberg antwoord";
+        });
+        questionContainer.appendChild(explanationToggleBtn);
+        questionContainer.appendChild(explanationElem);
+      }
+      
+      // Manage navigation buttons: previous, next/finish.
+      prevBtn.classList.toggle('hidden', currentQuestionIndex === 0);
+      if (currentQuestionIndex === currentQuiz.questions.length - 1) {
+        nextBtn.classList.add('hidden');
+        finishBtn.classList.remove('hidden');
+      } else {
+        nextBtn.classList.remove('hidden');
+        finishBtn.classList.add('hidden');
+      }
+    }
+
+    // Save the current answer.
+    function saveCurrentAnswer() {
+      const selectedOption = document.querySelector('input[name="option"]:checked');
+      userAnswers[currentQuestionIndex] = selectedOption ? parseInt(selectedOption.value) : -1;
+    }
+
+    // Next button handler.
+    nextBtn.addEventListener('click', () => {
+      saveCurrentAnswer();
+      if (currentQuestionIndex < currentQuiz.questions.length - 1) {
+        currentQuestionIndex++;
+        renderQuestion();
+      }
+    });
+
+    // Previous button handler.
+    prevBtn.addEventListener('click', () => {
+      saveCurrentAnswer();
+      if (currentQuestionIndex > 0) {
+        currentQuestionIndex--;
+        renderQuestion();
+      }
+    });
+
+    // Fast forward button handler: jump to the specified question.
+    fastForwardBtn.addEventListener('click', () => {
+      const target = parseInt(fastForwardInput.value);
+      if (isNaN(target) || target < 1 || target > currentQuiz.questions.length) {
+        alert(`Voer een getal in tussen 1 en ${currentQuiz.questions.length}.`);
+        return;
+      }
+      saveCurrentAnswer();
+      currentQuestionIndex = target - 1;
+      renderQuestion();
+    });
+
+    // "Hoofdmenu" button handler: returns immediately to the main menu (current quiz progress is lost).
+    menuBtn.addEventListener('click', () => {
+      if (confirm("Weet je zeker dat je het huidige quiz wilt verlaten en teruggaan naar het hoofdmenu?")) {
+        window.location.reload();
+      }
+    });
+
+    // Finish quiz button handler.
+    finishBtn.addEventListener('click', () => {
+      if (confirm("Weet je zeker dat je de quiz wilt beëindigen? Onbeantwoorde vragen blijven leeg.")) {
+        saveCurrentAnswer();
+        finishQuiz();
+      }
+    });
+
+    // Calculate score, display results, and record the result.
+    function finishQuiz() {
+      calculateScore();
+      showResults();
+      recordQuizResult(currentQuiz.title, score, currentQuiz.questions.length);
+    }
+
+    // Calculate the score.
+    function calculateScore() {
+      score = 0;
+      currentQuiz.questions.forEach((q, index) => {
+        if (userAnswers[index] === q.correct) {
+          score++;
+        }
+      });
+    }
+
+    // Display quiz results.
+    function showResults() {
+      quizContainer.classList.add('hidden');
+      resultContainer.classList.remove('hidden');
+      scoreText.textContent = `Je hebt ${score} van de ${currentQuiz.questions.length} vragen goed beantwoord.`;
+      detailsContainer.innerHTML = "";
+      detailsContainer.classList.add('hidden');
+      showDetailsBtn.textContent = "Volledige uitwerking";
+      updateQuizResultsDisplay();
+    }
+
+    // Detailed results view.
+    showDetailsBtn.addEventListener('click', () => {
+      if (detailsContainer.classList.contains('hidden')) {
+        showDetailedResults();
+        detailsContainer.classList.remove('hidden');
+        showDetailsBtn.textContent = "Verberg uitwerking";
+      } else {
+        detailsContainer.classList.add('hidden');
+        showDetailsBtn.textContent = "Volledige uitwerking";
+      }
+    });
+
+    function showDetailedResults() {
+      detailsContainer.innerHTML = "";
+      currentQuiz.questions.forEach((q, index) => {
+        const resultDiv = document.createElement('div');
+        resultDiv.classList.add('result-item');
+        const userAnswerText = userAnswers[index] !== -1 ? q.options[userAnswers[index]] : "Geen antwoord";
+        const correctAnswerText = q.options[q.correct];
+        resultDiv.innerHTML = `
+          <strong>Vraag ${index+1}:</strong> ${q.question}<br>
+          <strong>Jouw antwoord:</strong> ${userAnswerText}<br>
+          <strong>Correct antwoord:</strong> ${correctAnswerText}
+        `;
+        detailsContainer.appendChild(resultDiv);
+      });
+    }
+
+    // Restart button handler: reloads the page so the main menu is updated.
+    restartBtn.addEventListener('click', () => {
+      window.location.reload();
+    });
+
+    // Record quiz result in localStorage.
+    function recordQuizResult(quizTitle, score, total) {
+      const storedResults = JSON.parse(localStorage.getItem('quizResults') || '{}');
+      storedResults[quizTitle] = { score, total, timestamp: new Date().toISOString() };
+      localStorage.setItem('quizResults', JSON.stringify(storedResults));
+      console.log("Quiz result recorded:", storedResults);
+    }
+  </script>
+</body>
+</html>
